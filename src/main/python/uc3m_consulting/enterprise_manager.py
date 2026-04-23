@@ -33,9 +33,9 @@ class EnterpriseManager:
         even_position_sum = 0
         odd_position_sum = 0
 
-        for index in range(len(cif_digits)):
+        for index, digit in enumerate(cif_digits):
             if index % 2 == 0:
-                doubled_value = int(cif_digits[index]) * 2
+                doubled_value = int(digit) * 2
                 if doubled_value > 9:
                     even_position_sum = (
                             even_position_sum
@@ -45,7 +45,7 @@ class EnterpriseManager:
                 else:
                     even_position_sum = even_position_sum + doubled_value
             else:
-                odd_position_sum = odd_position_sum + int(cif_digits[index])
+                odd_position_sum = odd_position_sum + int(digit)
 
         total_sum = even_position_sum + odd_position_sum
         remainder = total_sum % 10

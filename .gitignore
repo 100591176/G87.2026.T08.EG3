@@ -1,5 +1,8 @@
-venv*
-.venv*
-.idea
-.pybuilder
-target
+__pycache__/
+*.pyc
+src/unittest/json_files/test_numdocs_store.json
+target/
+.venv/
+venv/
+env/
+.idea/
