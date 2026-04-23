@@ -160,7 +160,6 @@ class EnterpriseManager:
 
         return new_project.project_id
 
-
     def find_docs(self, date_str):
         """
         Generates a JSON report counting valid documents for a specific date.
@@ -178,66 +177,64 @@ class EnterpriseManager:
             EnterpriseManagementException: On invalid date, file IO errors,
                 missing data, or cryptographic integrity failure.
         """
-        mr = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
-        res = mr.fullmatch(date_str)
-        if not res:
+        date_pattern = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
+        match = date_pattern.fullmatch(date_str)
+        if not match:
             raise EnterpriseManagementException("Invalid date format")
 
         try:
-            my_date = datetime.strptime(date_str, "%d/%m/%Y").date()
+            query_date = datetime.strptime(date_str, "%d/%m/%Y").date()
         except ValueError as ex:
             raise EnterpriseManagementException("Invalid date format") from ex
 
-
-        # open documents
         try:
             with open(TEST_DOCUMENTS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
-                d_list = json.load(file)
+                documents_list = json.load(file)
         except FileNotFoundError as ex:
             raise EnterpriseManagementException("Wrong file  or file path") from ex
 
+        documents_found = 0
 
-        rst = 0
+        for stored_document in documents_list:
+            register_timestamp = stored_document["register_date"]
+            document_date_str = datetime.fromtimestamp(register_timestamp).strftime("%d/%m/%Y")
 
-        # loop to find
-        for el in d_list:
-            time_val = el["register_date"]
-
-            # string conversion for easy match
-            doc_date_str = datetime.fromtimestamp(time_val).strftime("%d/%m/%Y")
-
-            if doc_date_str == date_str:
-                d_obj = datetime.fromtimestamp(time_val, tz=timezone.utc)
-                with freeze_time(d_obj):
-                    # check the project id (thanks to freezetime)
-                    # if project_id are different then the data has been
-                    #manipulated
-                    p = ProjectDocument(el["project_id"], el["file_name"])
-                    if p.document_signature == el["document_signature"]:
-                        rst = rst + 1
+            if document_date_str == date_str:
+                frozen_datetime = datetime.fromtimestamp(register_timestamp, tz=timezone.utc)
+                with freeze_time(frozen_datetime):
+                    project_document = ProjectDocument(
+                        stored_document["project_id"],
+                        stored_document["file_name"]
+                    )
+                    if project_document.document_signature == stored_document["document_signature"]:
+                        documents_found = documents_found + 1
                     else:
                         raise EnterpriseManagementException("Inconsistent document signature")
 
-        if rst == 0:
+        if documents_found == 0:
             raise EnterpriseManagementException("No documents found")
-        # prepare json text
-        now_str = datetime.now(timezone.utc).timestamp()
-        s = {"Querydate":  date_str,
-             "ReportDate": now_str,
-             "Numfiles": rst
-             }
+
+        report_timestamp = datetime.now(timezone.utc).timestamp()
+        report_entry = {
+            "Querydate": date_str,
+            "ReportDate": report_timestamp,
+            "Numfiles": documents_found
+        }
 
         try:
             with open(TEST_NUMDOCS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
-                dl = json.load(file)
+                reports_list = json.load(file)
         except FileNotFoundError:
-            dl = []
+            reports_list = []
         except json.JSONDecodeError as ex:
             raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
-        dl.append(s)
+
+        reports_list.append(report_entry)
+
         try:
             with open(TEST_NUMDOCS_STORE_FILE, "w", encoding="utf-8", newline="") as file:
-                json.dump(dl, file, indent=2)
+                json.dump(reports_list, file, indent=2)
         except FileNotFoundError as ex:
             raise EnterpriseManagementException("Wrong file  or file path") from ex
-        return rst
+
+        return documents_found
