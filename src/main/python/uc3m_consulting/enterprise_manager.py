@@ -172,6 +172,31 @@ class EnterpriseManager:
         except ValueError as ex:
             raise EnterpriseManagementException("Invalid date format") from ex
 
+    def _store_documents_report(self, date_str: str, documents_found: int):
+        """Store the documents report in the JSON report file."""
+        report_timestamp = datetime.now(timezone.utc).timestamp()
+        report_entry = {
+            "Querydate": date_str,
+            "ReportDate": report_timestamp,
+            "Numfiles": documents_found
+        }
+
+        try:
+            with open(TEST_NUMDOCS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
+                reports_list = json.load(file)
+        except FileNotFoundError:
+            reports_list = []
+        except json.JSONDecodeError as ex:
+            raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
+
+        reports_list.append(report_entry)
+
+        try:
+            with open(TEST_NUMDOCS_STORE_FILE, "w", encoding="utf-8", newline="") as file:
+                json.dump(reports_list, file, indent=2)
+        except FileNotFoundError as ex:
+            raise EnterpriseManagementException("Wrong file  or file path") from ex
+
     def find_docs(self, date_str):
         """
         Generates a JSON report counting valid documents for a specific date.
@@ -189,7 +214,7 @@ class EnterpriseManager:
             EnterpriseManagementException: On invalid date, file IO errors,
                 missing data, or cryptographic integrity failure.
         """
-        query_date = self._validate_query_date(date_str)
+        self._validate_query_date(date_str)
 
         try:
             with open(TEST_DOCUMENTS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
@@ -218,27 +243,5 @@ class EnterpriseManager:
         if documents_found == 0:
             raise EnterpriseManagementException("No documents found")
 
-        report_timestamp = datetime.now(timezone.utc).timestamp()
-        report_entry = {
-            "Querydate": date_str,
-            "ReportDate": report_timestamp,
-            "Numfiles": documents_found
-        }
-
-        try:
-            with open(TEST_NUMDOCS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
-                reports_list = json.load(file)
-        except FileNotFoundError:
-            reports_list = []
-        except json.JSONDecodeError as ex:
-            raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
-
-        reports_list.append(report_entry)
-
-        try:
-            with open(TEST_NUMDOCS_STORE_FILE, "w", encoding="utf-8", newline="") as file:
-                json.dump(reports_list, file, indent=2)
-        except FileNotFoundError as ex:
-            raise EnterpriseManagementException("Wrong file  or file path") from ex
-
+        self._store_documents_report(date_str, documents_found)
         return documents_found
