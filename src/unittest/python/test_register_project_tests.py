@@ -1,17 +1,17 @@
 """class for testing the regsiter_project method"""
 import unittest
 import csv
-import json
 import os.path
-import hashlib
 from unittest import TestCase
 from os import remove
 from freezegun import freeze_time
 from uc3m_consulting import (JSON_FILES_PATH,
-                        PROJECTS_STORE_FILE,
-                        EnterpriseProject,
-                        EnterpriseManager,
-                        EnterpriseManagementException)
+                             PROJECTS_STORE_FILE,
+                             EnterpriseProject,
+                             EnterpriseManager,
+                             EnterpriseManagementException)
+from uc3m_consulting.test_support import read_json_file, get_file_signature
+
 
 class TestRegisterProjectTest(TestCase):
     """Class for testing register_project"""
@@ -21,21 +21,7 @@ class TestRegisterProjectTest(TestCase):
         if os.path.exists(PROJECTS_STORE_FILE):
             remove(PROJECTS_STORE_FILE)
 
-
-    @staticmethod
-    def read_file():
-        """ this method read a Json file and return the value """
-        my_file= PROJECTS_STORE_FILE
-        try:
-            with open(my_file, "r", encoding="utf-8", newline="") as file:
-                data = json.load(file)
-        except FileNotFoundError as ex:
-            raise EnterpriseManagementException("Wrong file or file path") from ex
-        except json.JSONDecodeError as ex:
-            raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
-        return data
-
-    #pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals
     @freeze_time("2024/12/31 13:00:00")
     def test_parametrized_cases_tests(self):
         """Parametrized cases read from testingCases_RF1.csv"""
@@ -67,33 +53,23 @@ class TestRegisterProjectTest(TestCase):
                                                       date=project_date,
                                                       project_description=project_description)
                         self.assertEqual(result, valor)
-                        # Check if this DNI is store in storeRequest.json
-                        my_data = self.read_file()
+                        my_data = read_json_file(PROJECTS_STORE_FILE)
                         my_request = EnterpriseProject(company_cif=enterprise_cif,
-                                                     project_acronym=project_acronym,
-                                                     project_description=project_description,
-                                                     starting_date=project_date,
-                                                     project_budget=number_budget,
-                                                     department=project_department)
+                                                       project_acronym=project_acronym,
+                                                       project_description=project_description,
+                                                       starting_date=project_date,
+                                                       project_budget=number_budget,
+                                                       department=project_department)
                         found = False
                         for k in my_data:
                             if k["project_id"] == valor:
                                 found = True
-                                # this assert give me more information
-                                # about the differences than assertEqual
                                 self.assertDictEqual(k, my_request.to_json())
-                        # if found is False , this assert fails
                         self.assertTrue(found)
                 else:
                     with self.subTest(test_id + valid):
+                        hash_original = get_file_signature(PROJECTS_STORE_FILE)
 
-                        # we calculater the files signature bejore calling the tested method
-                        if os.path.isfile(PROJECTS_STORE_FILE):
-                            with open(PROJECTS_STORE_FILE, "r",
-                                      encoding="utf-8", newline="") as file_org:
-                                hash_original = hashlib.md5(str(file_org).encode()).hexdigest()
-                        else:
-                            hash_original = ""
                         with self.assertRaises(EnterpriseManagementException) as c_m:
                             valor = mngr.register_project(company_cif=enterprise_cif,
                                                           project_acronym=project_acronym,
@@ -103,21 +79,12 @@ class TestRegisterProjectTest(TestCase):
                                                           project_description=project_description)
                         self.assertEqual(c_m.exception.message, result)
 
-                        # now we check that the signature of the file is the same
-                        # (the file didn't change)
-                        if os.path.isfile(PROJECTS_STORE_FILE):
-                            with open(PROJECTS_STORE_FILE, "r",
-                                      encoding="utf-8", newline="") as file:
-                                hash_new = hashlib.md5(str(file).encode()).hexdigest()
-                        else:
-                            hash_new = ""
+                        hash_new = get_file_signature(PROJECTS_STORE_FILE)
                         self.assertEqual(hash_new, hash_original)
 
     @freeze_time("2026/03/22 13:00:00")
     def test_duplicated_project_test(self):
-
         """tets method for duplicated projects"""
-
         enterprise_cif = "A12345674"
         project_acronym = "TEST5"
         project_department = "HR"
@@ -125,34 +92,26 @@ class TestRegisterProjectTest(TestCase):
         project_description = "Testing duplicated projects"
         number_budget = 50000.00
 
-        mngr  = EnterpriseManager()
+        mngr = EnterpriseManager()
         mngr.register_project(company_cif=enterprise_cif,
-                                           project_acronym=project_acronym,
-                                           project_description=project_description,
-                                           date=project_date,
-                                           budget=number_budget,
-                                           department=project_department)
-        if os.path.isfile(PROJECTS_STORE_FILE):
-            with open(PROJECTS_STORE_FILE, "r", encoding="utf-8", newline="") as file_org:
-                hash_original = hashlib.md5(str(file_org).encode()).hexdigest()
-        else:
-            hash_original = ""
+                              project_acronym=project_acronym,
+                              project_description=project_description,
+                              date=project_date,
+                              budget=number_budget,
+                              department=project_department)
+
+        hash_original = get_file_signature(PROJECTS_STORE_FILE)
+
         with self.assertRaises(EnterpriseManagementException) as c_m:
             mngr.register_project(company_cif=enterprise_cif,
-                                               project_acronym=project_acronym,
-                                               project_description=project_description,
-                                               date=project_date,
-                                               budget=number_budget,
-                                               department=project_department)
+                                  project_acronym=project_acronym,
+                                  project_description=project_description,
+                                  date=project_date,
+                                  budget=number_budget,
+                                  department=project_department)
         self.assertEqual(c_m.exception.message, "Duplicated project in projects list")
 
-        # now we check that the signature of the file is the same
-        # (the file didn't change)
-        if os.path.isfile(PROJECTS_STORE_FILE):
-            with open(PROJECTS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
-                hash_new = hashlib.md5(str(file).encode()).hexdigest()
-        else:
-            hash_new = ""
+        hash_new = get_file_signature(PROJECTS_STORE_FILE)
         self.assertEqual(hash_new, hash_original)
 
     @freeze_time("2026/03/22 13:00:00")
@@ -171,8 +130,8 @@ class TestRegisterProjectTest(TestCase):
                                            date=project_date,
                                            budget=number_budget,
                                            department=project_department)
-        self.assertEqual("6ad10748f3c9137c0f22ff7d4eed8d19",my_request)
-        my_data = self.read_file()
+        self.assertEqual("6ad10748f3c9137c0f22ff7d4eed8d19", my_request)
+        my_data = read_json_file(PROJECTS_STORE_FILE)
         my_project = EnterpriseProject(company_cif=enterprise_cif,
                                        project_acronym=project_acronym,
                                        project_description=project_description,
@@ -183,10 +142,7 @@ class TestRegisterProjectTest(TestCase):
         for k in my_data:
             if k["project_id"] == my_request:
                 found = True
-                # this assert give me more information
-                # about the differences than assertEqual
                 self.assertDictEqual(k, my_project.to_json())
-        # if found is False , this assert fails
         self.assertTrue(found)
 
     @freeze_time("2025/03/22 13:00:00")
@@ -206,7 +162,7 @@ class TestRegisterProjectTest(TestCase):
                                            budget=number_budget,
                                            department=project_department)
         self.assertEqual("8aab556991e7b0f1361b72e3ab17fa81", my_request)
-        my_data = self.read_file()
+        my_data = read_json_file(PROJECTS_STORE_FILE)
         my_project = EnterpriseProject(company_cif=enterprise_cif,
                                        project_acronym=project_acronym,
                                        project_description=project_description,
@@ -217,10 +173,7 @@ class TestRegisterProjectTest(TestCase):
         for k in my_data:
             if k["project_id"] == my_request:
                 found = True
-                # this assert give me more information
-                # about the differences than assertEqual
                 self.assertDictEqual(k, my_project.to_json())
-        # if found is False , this assert fails
         self.assertTrue(found)
 
     @freeze_time("2026/03/26 13:00:00")
@@ -233,29 +186,19 @@ class TestRegisterProjectTest(TestCase):
         project_description = "Testing yesteday's project"
         number_budget = 50000.00
         mngr = EnterpriseManager()
-        # enterprise_cif;project_acronym;project_department;project_date;project_description;number_budget;RESULT
 
-        if os.path.isfile(PROJECTS_STORE_FILE):
-            with open(PROJECTS_STORE_FILE, "r", encoding="utf-8", newline="") as file_org:
-                hash_original = hashlib.md5(str(file_org).encode()).hexdigest()
-        else:
-            hash_original = ""
+        hash_original = get_file_signature(PROJECTS_STORE_FILE)
+
         with self.assertRaises(EnterpriseManagementException) as c_m:
             mngr.register_project(company_cif=enterprise_cif,
-                                               project_acronym=project_acronym,
-                                               project_description=project_description,
-                                               date=project_date,
-                                               budget=number_budget,
-                                               department=project_department)
+                                  project_acronym=project_acronym,
+                                  project_description=project_description,
+                                  date=project_date,
+                                  budget=number_budget,
+                                  department=project_department)
         self.assertEqual(c_m.exception.message, "Project's date must be today or later.")
 
-        # now we check that the signature of the file is the same
-        # (the file didn't change)
-        if os.path.isfile(PROJECTS_STORE_FILE):
-            with open(PROJECTS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
-                hash_new = hashlib.md5(str(file).encode()).hexdigest()
-        else:
-            hash_new = ""
+        hash_new = get_file_signature(PROJECTS_STORE_FILE)
         self.assertEqual(hash_new, hash_original)
 
 
