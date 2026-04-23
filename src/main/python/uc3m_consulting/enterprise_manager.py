@@ -67,24 +67,26 @@ class EnterpriseManager:
 
         return True
 
-    def validate_starting_date(self, t_d):
-        """validates the  date format  using regex"""
-        mr = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
-        res = mr.fullmatch(t_d)
-        if not res:
+    def validate_starting_date(self, starting_date: str):
+        """Validate the starting date format and value."""
+        date_pattern = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
+        match = date_pattern.fullmatch(starting_date)
+        if not match:
             raise EnterpriseManagementException("Invalid date format")
 
         try:
-            my_date = datetime.strptime(t_d, "%d/%m/%Y").date()
+            parsed_date = datetime.strptime(starting_date, "%d/%m/%Y").date()
         except ValueError as ex:
             raise EnterpriseManagementException("Invalid date format") from ex
 
-        if my_date < datetime.now(timezone.utc).date():
+        if parsed_date < datetime.now(timezone.utc).date():
             raise EnterpriseManagementException("Project's date must be today or later.")
 
-        if my_date.year < 2025 or my_date.year > 2050:
+        if parsed_date.year < 2025 or parsed_date.year > 2050:
             raise EnterpriseManagementException("Invalid date format")
-        return t_d
+
+        return starting_date
+
     #pylint: disable=too-many-arguments, too-many-positional-arguments
     def register_project(self,
                          company_cif: str,
