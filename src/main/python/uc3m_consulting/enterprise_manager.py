@@ -160,6 +160,18 @@ class EnterpriseManager:
 
         return new_project.project_id
 
+    def _validate_query_date(self, date_str: str):
+        """Validate the query date format and return the parsed date."""
+        date_pattern = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
+        match = date_pattern.fullmatch(date_str)
+        if not match:
+            raise EnterpriseManagementException("Invalid date format")
+
+        try:
+            return datetime.strptime(date_str, "%d/%m/%Y").date()
+        except ValueError as ex:
+            raise EnterpriseManagementException("Invalid date format") from ex
+
     def find_docs(self, date_str):
         """
         Generates a JSON report counting valid documents for a specific date.
@@ -177,15 +189,7 @@ class EnterpriseManager:
             EnterpriseManagementException: On invalid date, file IO errors,
                 missing data, or cryptographic integrity failure.
         """
-        date_pattern = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
-        match = date_pattern.fullmatch(date_str)
-        if not match:
-            raise EnterpriseManagementException("Invalid date format")
-
-        try:
-            query_date = datetime.strptime(date_str, "%d/%m/%Y").date()
-        except ValueError as ex:
-            raise EnterpriseManagementException("Invalid date format") from ex
+        query_date = self._validate_query_date(date_str)
 
         try:
             with open(TEST_DOCUMENTS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
