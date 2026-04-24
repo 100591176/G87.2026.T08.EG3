@@ -95,7 +95,25 @@ class EnterpriseManager:
 
         return starting_date
 
-    #pylint: disable=too-many-arguments, too-many-positional-arguments
+    def _validate_project_acronym(self, project_acronym: str):
+        """Validates the project acronym."""
+        acronym_pattern = re.compile(r"^[a-zA-Z0-9]{5,10}")
+        if not acronym_pattern.fullmatch(project_acronym):
+            raise EnterpriseManagementException("Invalid acronym")
+
+    def _validate_project_description(self, project_description: str):
+        """Validates the project description."""
+        description_pattern = re.compile(r"^.{10,30}$")
+        if not description_pattern.fullmatch(project_description):
+            raise EnterpriseManagementException("Invalid description format")
+
+    def _validate_department(self, department: str):
+        """Validates the department."""
+        department_pattern = re.compile(r"(HR|FINANCE|LEGAL|LOGISTICS)")
+        if not department_pattern.fullmatch(department):
+            raise EnterpriseManagementException("Invalid department")
+
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
     def register_project(self,
                          company_cif: str,
                          project_acronym: str,
@@ -105,22 +123,9 @@ class EnterpriseManager:
                          budget: str):
         """registers a new project"""
         self.validate_cif(company_cif)
-
-        acronym_pattern = re.compile(r"^[a-zA-Z0-9]{5,10}")
-        acronym_match = acronym_pattern.fullmatch(project_acronym)
-        if not acronym_match:
-            raise EnterpriseManagementException("Invalid acronym")
-
-        description_pattern = re.compile(r"^.{10,30}$")
-        description_match = description_pattern.fullmatch(project_description)
-        if not description_match:
-            raise EnterpriseManagementException("Invalid description format")
-
-        department_pattern = re.compile(r"(HR|FINANCE|LEGAL|LOGISTICS)")
-        department_match = department_pattern.fullmatch(department)
-        if not department_match:
-            raise EnterpriseManagementException("Invalid department")
-
+        self._validate_project_acronym(project_acronym)
+        self._validate_project_description(project_description)
+        self._validate_department(department)
         self.validate_starting_date(date)
 
         try:
