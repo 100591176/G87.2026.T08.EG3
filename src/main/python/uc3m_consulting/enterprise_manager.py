@@ -17,19 +17,8 @@ class EnterpriseManager:
         pass
 
     @staticmethod
-    def validate_cif(cif_code: str):
-        """Validate a CIF number."""
-        if not isinstance(cif_code, str):
-            raise EnterpriseManagementException("CIF code must be a string")
-
-        cif_pattern = re.compile(r"^[ABCDEFGHJKNPQRSUVW]\d{7}[0-9A-J]$")
-        if not cif_pattern.fullmatch(cif_code):
-            raise EnterpriseManagementException("Invalid CIF format")
-
-        cif_letter = cif_code[0]
-        cif_digits = cif_code[1:8]
-        control_character = cif_code[8]
-
+    def _calculate_cif_control_digit(cif_digits: str) -> int:
+        """Calculates the control digit for a CIF."""
         even_position_sum = 0
         odd_position_sum = 0
 
@@ -53,6 +42,25 @@ class EnterpriseManager:
 
         if control_digit == 10:
             control_digit = 0
+
+        return control_digit
+
+    @staticmethod
+    def validate_cif(cif_code: str):
+        """Validate a CIF number."""
+        if not isinstance(cif_code, str):
+            raise EnterpriseManagementException("CIF code must be a string")
+
+        cif_pattern = re.compile(r"^[ABCDEFGHJKNPQRSUVW]\d{7}[0-9A-J]$")
+        if not cif_pattern.fullmatch(cif_code):
+            raise EnterpriseManagementException("Invalid CIF format")
+
+        cif_letter = cif_code[0]
+        cif_digits = cif_code[1:8]
+        control_character = cif_code[8]
+
+        # Call the newly extracted helper method
+        control_digit = EnterpriseManager._calculate_cif_control_digit(cif_digits)
 
         control_letters = "JABCDEFGHI"
 
