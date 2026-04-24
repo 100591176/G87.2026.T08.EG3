@@ -113,6 +113,22 @@ class EnterpriseManager:
         if not department_pattern.fullmatch(department):
             raise EnterpriseManagementException("Invalid department")
 
+    def _validate_budget(self, budget: str):
+        """Validates the budget format and limits."""
+        try:
+            budget_amount = float(budget)
+        except ValueError as exc:
+            raise EnterpriseManagementException("Invalid budget amount") from exc
+
+        budget_text = str(budget_amount)
+        if '.' in budget_text:
+            decimal_places = len(budget_text.split('.')[1])
+            if decimal_places > 2:
+                raise EnterpriseManagementException("Invalid budget amount")
+
+        if budget_amount < 50000 or budget_amount > 1000000:
+            raise EnterpriseManagementException("Invalid budget amount")
+
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def register_project(self,
                          company_cif: str,
@@ -127,20 +143,7 @@ class EnterpriseManager:
         self._validate_project_description(project_description)
         self._validate_department(department)
         self.validate_starting_date(date)
-
-        try:
-            budget_amount = float(budget)
-        except ValueError as exc:
-            raise EnterpriseManagementException("Invalid budget amount") from exc
-
-        budget_text = str(budget_amount)
-        if '.' in budget_text:
-            decimal_places = len(budget_text.split('.')[1])
-            if decimal_places > 2:
-                raise EnterpriseManagementException("Invalid budget amount")
-
-        if budget_amount < 50000 or budget_amount > 1000000:
-            raise EnterpriseManagementException("Invalid budget amount")
+        self._validate_budget(budget)
 
         new_project = EnterpriseProject(company_cif=company_cif,
                                         project_acronym=project_acronym,
