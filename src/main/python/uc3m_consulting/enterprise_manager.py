@@ -129,6 +129,26 @@ class EnterpriseManager:
         if budget_amount < 50000 or budget_amount > 1000000:
             raise EnterpriseManagementException("Invalid budget amount")
 
+    def _load_projects(self):
+        """Loads projects from the JSON store."""
+        try:
+            with open(PROJECTS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
+                return json.load(file)
+        except FileNotFoundError:
+            return []
+        except json.JSONDecodeError as ex:
+            raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
+
+    def _save_projects(self, projects_list):
+        """Saves projects to the JSON store."""
+        try:
+            with open(PROJECTS_STORE_FILE, "w", encoding="utf-8", newline="") as file:
+                json.dump(projects_list, file, indent=2)
+        except FileNotFoundError as ex:
+            raise EnterpriseManagementException("Wrong file  or file path") from ex
+        except json.JSONDecodeError as ex:
+            raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
+
     # pylint: disable=too-many-arguments, too-many-positional-arguments
     def register_project(self,
                          company_cif: str,
@@ -152,27 +172,14 @@ class EnterpriseManager:
                                         starting_date=date,
                                         project_budget=budget)
 
-        try:
-            with open(PROJECTS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
-                projects_list = json.load(file)
-        except FileNotFoundError:
-            projects_list = []
-        except json.JSONDecodeError as ex:
-            raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
+        projects_list = self._load_projects()
 
         for stored_project in projects_list:
             if stored_project == new_project.to_json():
                 raise EnterpriseManagementException("Duplicated project in projects list")
 
         projects_list.append(new_project.to_json())
-
-        try:
-            with open(PROJECTS_STORE_FILE, "w", encoding="utf-8", newline="") as file:
-                json.dump(projects_list, file, indent=2)
-        except FileNotFoundError as ex:
-            raise EnterpriseManagementException("Wrong file  or file path") from ex
-        except json.JSONDecodeError as ex:
-            raise EnterpriseManagementException("JSON Decode Error - Wrong JSON Format") from ex
+        self._save_projects(projects_list)
 
         return new_project.project_id
 
