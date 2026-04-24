@@ -13,6 +13,14 @@ from uc3m_consulting.project_document import ProjectDocument
 
 class EnterpriseManager:
     """Class for providing the methods for managing the orders"""
+    # Singleton-Instanz-Variable
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
         pass
 
